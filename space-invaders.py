@@ -1,3 +1,10 @@
+# Difficulty modes:
+#   Easy -> only spaceship shoots (unlimited bullets), alien y axis consistent
+#   Medium -> only spaceship shoots (unlimited), aliens descend when hit wall
+#   Hard -> spaceship (unlimited) AND aliens shoot, aliens descend when hit wall
+#   Expert -> spaceship (limited bullets) AND aliens shoot, aliens descend when hit wall
+
+
 import pygame
 
 
@@ -10,14 +17,18 @@ LIGHT_BLUE = (141, 214, 236)
 DEEP_BLUE = (46, 147, 177)
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
-BUTTON_WIDTH, BUTTON_HEIGHT = 300, 150
+BUTTON_WIDTH, BUTTON_HEIGHT = 250, 125
 BUTTON_SPACING = 20
 
+BULLET_WIDTH, BULLET_HEIGHT = 8, 8
+BULLET_SPEED = 4
+SHOOT_COOLDOWN = 500 # 500 millisec == 0.5 sec
+
 SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 20, 40
-SPACESHIP_SPEED = 4
+SPACESHIP_SPEED = 5
 
 ALIEN_WIDTH, ALIEN_HEIGHT = 30, 30
-ALIEN_SPEED = 2
+ALIEN_SPEED = 3
 
 ALIEN_ROWS = 3
 ALIEN_COLS = 5
@@ -33,7 +44,7 @@ class Button:
     def draw_to_screen(self, screen):
         button_color = DEEP_BLUE if self.selected else LIGHT_BLUE
         border_color = BLACK
-        border_thickness = 3  # Thickness of the border
+        border_thickness = 3 
 
         # Draw border first (slightly larger than button)
         pygame.draw.rect(
@@ -61,6 +72,23 @@ class GameObject:
         screen.blit(self.image, self.rect)
 
 
+class Bullet(GameObject):
+    def __init__(self, x_pos, y_pos):
+        GameObject.__init__(
+            self, 
+            x_pos, y_pos, 
+            BULLET_WIDTH, BULLET_HEIGHT, 
+            BLACK
+        )
+        self.speed = BULLET_SPEED
+
+    def move(self):
+        self.rect.y -= self.speed
+
+    def off_screen(self):
+        return self.rect.y < 0
+
+
 class Spaceship(GameObject):
     def __init__(self, x_pos, y_pos):
         GameObject.__init__(
@@ -70,6 +98,8 @@ class Spaceship(GameObject):
             BLACK
         )
         self.speed = SPACESHIP_SPEED
+        self.bullets = []
+        self.last_shot = 0 # Time of last shot for cooldown (can't spam)
 
     def move(self, direction):
         self.rect.x += direction * self.speed
@@ -79,6 +109,13 @@ class Spaceship(GameObject):
             self.rect.left = 0
         elif self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
+
+    def shoot(self):
+        curr_time = pygame.time.get_ticks()
+        if (curr_time - self.last_shot) >= SHOOT_COOLDOWN:
+            bullet = Bullet(self.rect.centerx, self.rect.top)
+            self.bullets.append(bullet)
+            self.last_shot = curr_time
 
 
 class Alien(GameObject):
@@ -145,11 +182,12 @@ def launch_welcome_screen(screen):
     button_center_y = SCREEN_HEIGHT // 2 - BUTTON_HEIGHT // 2
 
     buttons = [
-        Button("Easy", button_center_x, button_center_y - BUTTON_SPACING - BUTTON_HEIGHT),
-        Button("Medium", button_center_x, button_center_y),
-        Button("Hard", button_center_x, button_center_y + BUTTON_SPACING + BUTTON_HEIGHT),
+        Button("Easy", button_center_x, button_center_y - 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Medium", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Hard", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Expert", button_center_x, button_center_y + 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
     ]
-    selected_index = 1 # Default == medium
+    selected_index = 0 # Default == easy
 
     running = True
     while running:
@@ -170,13 +208,13 @@ def launch_welcome_screen(screen):
         if pygame.key.get_pressed()[pygame.K_RETURN]:
             running = False
 
-    return ["Easy", "Medium", "Hard"][selected_index]
+    return ["Easy", "Medium", "Hard", "Expert"][selected_index]
             
 
 def get_difficulty(buttons, selected_index):
     keys = pygame.key.get_pressed()
 
-    # Start at medium ... up == easy, down == hard
+    # Up arrow == easier, down == harder
     if keys[pygame.K_DOWN]:
         selected_index = (selected_index + 1) % len(buttons)
     elif keys[pygame.K_UP]:
@@ -188,10 +226,14 @@ def get_difficulty(buttons, selected_index):
 def render_screen(screen, color, items_to_draw):
     screen.fill(color)
 
-    # Draw spaceships, aliens, buttons, etc
+    # Draw spaceships (+ bullets), aliens, buttons, etc
     for item in items_to_draw:
         item.draw_to_screen(screen)
-    
+
+        if isinstance(item, Spaceship):
+            for bullet in item.bullets:
+                bullet.draw_to_screen(screen)
+
     pygame.display.flip()
 
 
@@ -203,11 +245,28 @@ def handle_player_keys(spaceship):
     if keys[pygame.K_RIGHT]:
         spaceship.move(1)
 
+    if keys[pygame.K_SPACE]:
+        spaceship.shoot()
+
+
+def check_bullets(spaceship, aliens):
+    for bullet in spaceship.bullets.copy(): # Iterate on copy to avoid issues
+        bullet.move()
+
+        # Check if bullet left screen
+        if bullet.off_screen():
+            spaceship.bullets.remove(bullet)
+
+        # Check for collisions
+        for alien in aliens.aliens.copy():
+            if bullet.rect.colliderect(alien.rect):
+                aliens.aliens.remove(alien)
+                spaceship.bullets.remove(bullet)
+                break
+
 
 # Main game loop
 def run_game(window, clock, difficulty):
-    print(difficulty)
-
     # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
     spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70) 
     aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
@@ -222,6 +281,7 @@ def run_game(window, clock, difficulty):
         handle_player_keys(spaceship)
 
         aliens.move()
+        check_bullets(spaceship, aliens)
 
         # Update display
         render_screen(window, PASTEL_GREEN, [spaceship, aliens])
