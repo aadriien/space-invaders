@@ -105,35 +105,52 @@ class Aliens:
             alien.draw_to_screen(screen)
 
 
-# Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
-spaceship = Spaceship(WIDTH // 2, HEIGHT - 70) 
-aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
+def render_screen(screen, spaceship, aliens):
+    screen.fill(BACKGROUND_COLOR)
+    spaceship.draw_to_screen(screen)
+    aliens.draw_to_screen(screen)
+    pygame.display.flip()
 
-# Run main game loop
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT: 
-            running = False
 
-    window.fill(BACKGROUND_COLOR)
-
-    # Spaceship left/right arrow key movement
+def handle_player_keys(spaceship):
     keys = pygame.key.get_pressed() 
+
     if keys[pygame.K_LEFT]:
         spaceship.move(-1)
     if keys[pygame.K_RIGHT]:
         spaceship.move(1)
 
-    aliens.move()
 
-    spaceship.draw_to_screen(window)
-    aliens.draw_to_screen(window)
+# Main game loop
+def run_game(spaceship, aliens):
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT: 
+                running = False
 
-    # Update display & confirm FPS
-    pygame.display.flip()
-    clock.tick(60)
+        # Spaceship left/right arrow key movement
+        handle_player_keys(spaceship)
 
-pygame.quit()
+        aliens.move()
+
+        # Update display
+        render_screen(window, spaceship, aliens)
+        clock.tick(60)
+
+    pygame.quit()
+
+
+def main():
+    # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
+    spaceship = Spaceship(WIDTH // 2, HEIGHT - 70) 
+    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
+
+    run_game(spaceship, aliens)
+
+
+if __name__ == "__main__":
+    main()     
+
 
 
