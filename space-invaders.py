@@ -1,31 +1,51 @@
 import pygame
 
 
-# Initialize game settings
-pygame.init()
-
 EASY_MODE = True # Alien difficulty
 
-SPACESHIP_WIDTH = 20
-SPACESHIP_HEIGHT = 40
-SPACESHIP_COLOR = (0, 0, 0)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+PASTEL_GREEN = (170, 208, 188) 
+LIGHT_BLUE = (141, 214, 236)
+DEEP_BLUE = (46, 147, 177)
+
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+BUTTON_WIDTH, BUTTON_HEIGHT = 300, 150
+BUTTON_SPACING = 20
+
+SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 20, 40
 SPACESHIP_SPEED = 4
 
-ALIEN_WIDTH = 30
-ALIEN_HEIGHT = 30
-ALIEN_COLOR = (0, 0, 0)
+ALIEN_WIDTH, ALIEN_HEIGHT = 30, 30
 ALIEN_SPEED = 2
 
 ALIEN_ROWS = 3
 ALIEN_COLS = 5
 
-BACKGROUND_COLOR = (170, 208, 188) 
-WIDTH, HEIGHT = 800, 600
 
-window = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Space Invaders!")
+# Difficulty selection on welcome page
+class Button:
+    def __init__(self, text, x_pos, y_pos):
+        self.rect = pygame.Rect(x_pos, y_pos, BUTTON_WIDTH, BUTTON_HEIGHT)
+        self.text = text
+        self.selected = False
 
-clock = pygame.time.Clock() # Loop speed (FPS, see below)
+    def draw_to_screen(self, screen):
+        button_color = DEEP_BLUE if self.selected else LIGHT_BLUE
+        border_color = BLACK
+        border_thickness = 3  # Thickness of the border
+
+        # Draw border first (slightly larger than button)
+        pygame.draw.rect(
+            screen, 
+            border_color, 
+            self.rect.inflate(border_thickness * 2, border_thickness * 2),  
+            border_thickness
+        )
+
+        pygame.draw.rect(screen, button_color, self.rect, border_radius = 5)
+        text_surface = FONT.render(self.text, True, WHITE)
+        screen.blit(text_surface, text_surface.get_rect(center = self.rect.center))
 
 
 # Basic functionality for moving pieces (spaceship, aliens, etc)
@@ -47,7 +67,7 @@ class Spaceship(GameObject):
             self, 
             x_pos, y_pos, 
             SPACESHIP_WIDTH, SPACESHIP_HEIGHT, 
-            SPACESHIP_COLOR
+            BLACK
         )
         self.speed = SPACESHIP_SPEED
 
@@ -57,8 +77,8 @@ class Spaceship(GameObject):
         # Prevent out of bound movement
         if self.rect.left < 0:
             self.rect.left = 0
-        elif self.rect.right > WIDTH:
-            self.rect.right = WIDTH
+        elif self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
 
 
 class Alien(GameObject):
@@ -67,7 +87,7 @@ class Alien(GameObject):
             self, 
             x_pos, y_pos, 
             ALIEN_WIDTH, ALIEN_HEIGHT, 
-            ALIEN_COLOR
+            BLACK
         )
         self.speed = ALIEN_SPEED
 
@@ -80,8 +100,8 @@ class Aliens:
 
         for row in range(alien_rows):
             for col in range(alien_cols):
-                x_pos = (WIDTH // (alien_cols + 1)) * (col + 1)
-                y_pos = (HEIGHT // 2 // (alien_rows + 1)) * (row + 1)
+                x_pos = (SCREEN_WIDTH // (alien_cols + 1)) * (col + 1)
+                y_pos = (SCREEN_HEIGHT // 2 // (alien_rows + 1)) * (row + 1)
                 self.aliens.append(Alien(x_pos, y_pos))
 
     def move(self):
@@ -89,7 +109,7 @@ class Aliens:
         hit_wall = False
         for alien in self.aliens:
             alien.rect.x += self.speed
-            if alien.rect.left <= 0 or alien.rect.right >= WIDTH:
+            if alien.rect.left <= 0 or alien.rect.right >= SCREEN_WIDTH:
                 hit_wall = True
 
         # Reverse if any aliens hit wall (& move down if not easy mode)
@@ -105,10 +125,73 @@ class Aliens:
             alien.draw_to_screen(screen)
 
 
-def render_screen(screen, spaceship, aliens):
-    screen.fill(BACKGROUND_COLOR)
-    spaceship.draw_to_screen(screen)
-    aliens.draw_to_screen(screen)
+def setup_game():
+    pygame.init()
+    pygame.font.init()
+
+    global FONT 
+    FONT = pygame.font.Font(None, 32)
+
+    pygame.display.set_caption("Space Invaders!")
+    
+    window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    clock = pygame.time.Clock() # Loop speed (FPS, see below)
+
+    return window, clock
+
+
+def launch_welcome_screen(screen):
+    button_center_x = SCREEN_WIDTH // 2 - BUTTON_WIDTH // 2
+    button_center_y = SCREEN_HEIGHT // 2 - BUTTON_HEIGHT // 2
+
+    buttons = [
+        Button("Easy", button_center_x, button_center_y - BUTTON_SPACING - BUTTON_HEIGHT),
+        Button("Medium", button_center_x, button_center_y),
+        Button("Hard", button_center_x, button_center_y + BUTTON_SPACING + BUTTON_HEIGHT),
+    ]
+    selected_index = 1 # Default == medium
+
+    running = True
+    while running:
+        render_screen(screen, PASTEL_GREEN, buttons)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.KEYDOWN:
+                selected_index = get_difficulty(buttons, selected_index)
+                    
+
+        for i, button in enumerate(buttons):
+            button.selected = (i == selected_index)
+
+        if pygame.key.get_pressed()[pygame.K_RETURN]:
+            running = False
+
+    return ["Easy", "Medium", "Hard"][selected_index]
+            
+
+def get_difficulty(buttons, selected_index):
+    keys = pygame.key.get_pressed()
+
+    # Start at medium ... up == easy, down == hard
+    if keys[pygame.K_DOWN]:
+        selected_index = (selected_index + 1) % len(buttons)
+    elif keys[pygame.K_UP]:
+        selected_index = (selected_index - 1) % len(buttons)
+    
+    return selected_index
+
+
+def render_screen(screen, color, items_to_draw):
+    screen.fill(color)
+
+    # Draw spaceships, aliens, buttons, etc
+    for item in items_to_draw:
+        item.draw_to_screen(screen)
+    
     pygame.display.flip()
 
 
@@ -122,7 +205,13 @@ def handle_player_keys(spaceship):
 
 
 # Main game loop
-def run_game(spaceship, aliens):
+def run_game(window, clock, difficulty):
+    print(difficulty)
+
+    # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
+    spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70) 
+    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
+
     running = True
     while running:
         for event in pygame.event.get():
@@ -135,18 +224,18 @@ def run_game(spaceship, aliens):
         aliens.move()
 
         # Update display
-        render_screen(window, spaceship, aliens)
+        render_screen(window, PASTEL_GREEN, [spaceship, aliens])
         clock.tick(60)
 
     pygame.quit()
 
 
 def main():
-    # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
-    spaceship = Spaceship(WIDTH // 2, HEIGHT - 70) 
-    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
+    # Initialize game settings & run
+    window, clock = setup_game()
 
-    run_game(spaceship, aliens)
+    difficulty = launch_welcome_screen(window)
+    run_game(window, clock, difficulty)
 
 
 if __name__ == "__main__":

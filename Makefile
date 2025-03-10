@@ -11,7 +11,9 @@ check-venv:
 	fi
 
 install: check-venv
-	@$(VENV_DIR)/bin/python -m pip install -q pygame
+	@$(VENV_DIR)/bin/python -m pip show pygame > /dev/null 2>&1 || { \
+		$(VENV_DIR)/bin/python -m pip install -q pygame; \
+	}
 
 run: check-venv
 	@$(VENV_DIR)/bin/python space-invaders.py > /dev/null 2>&1
