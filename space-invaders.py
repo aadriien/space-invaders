@@ -11,6 +11,14 @@
 # If an alien reaches spaceship (collide/contact), then game over
 # If an alien successfully shoots spaceship, then game over
 
+# TODO:
+#   - implement Hard mode (bottom row of aliens can shoot)
+#       -> implement game over when spaceship is hit by alien bullet
+#   - implement Expert mode (spaceship's bullets are limited)
+#       -> implement bullet counter metric on screen
+#       -> implement game over when alien touches / collides with spaceship
+#   - implement additional row & column of aliens on level up
+
 
 import pygame
 
@@ -189,7 +197,7 @@ def setup_game(caption):
     pygame.display.set_caption(caption)
     
     window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    clock = pygame.time.Clock() # Loop speed (FPS, see below)
+    clock = pygame.time.Clock() # Loop speed (FPS, for consistent experience)
 
     return window, clock
 
@@ -216,10 +224,10 @@ def launch_welcome_screen():
             if event.type == pygame.QUIT:
                 running = False
 
+            # Choose mode & begin game on enter
             if event.type == pygame.KEYDOWN:
                 selected_index = get_difficulty(buttons, selected_index)
                     
-
         for i, button in enumerate(buttons):
             button.selected = (i == selected_index)
 
