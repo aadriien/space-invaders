@@ -12,14 +12,15 @@
 # If an alien successfully shoots spaceship, then game over
 
 # TODO:
-#   - implement Expert mode (spaceship's bullets are limited)
-#       -> implement bullet counter metric on screen
-#       -> implement game over when alien touches / collides with spaceship
-#   - implement additional row & column of aliens on level up
+
 
 # DONE:
 #   - implement Hard mode (bottom row of aliens can shoot)
 #       -> implement game over when spaceship is hit by alien bullet
+#   - implement Expert mode (spaceship's bullets are limited)
+#       -> implement bullet counter metric on screen
+#       -> implement game over when alien touches / collides with spaceship
+#   - implement additional row & column of aliens on level up
 
 
 import pygame
@@ -174,7 +175,7 @@ class Aliens:
         self.bullets = []
 
         alien_spacing_x = ALIEN_WIDTH + 25
-        alien_spacing_y = ALIEN_HEIGHT + 10
+        alien_spacing_y = ALIEN_HEIGHT 
 
         space_distribution_x = (SCREEN_WIDTH - (alien_cols * alien_spacing_x)) // 2
 
@@ -198,7 +199,7 @@ class Aliens:
 
             if difficulty >= 1:
                 for alien in self.aliens:
-                    alien.rect.y += (ALIEN_HEIGHT // 2)
+                    alien.rect.y += (ALIEN_HEIGHT // 5)
 
     def draw_to_screen(self, screen):
         for alien in self.aliens:
@@ -341,17 +342,29 @@ def check_bullets(spaceship, aliens):
         if bullet.rect.colliderect(spaceship.rect):
             return True 
 
-    return False # By default, game not over
+    return False 
+
+
+def check_collisions(spaceship, aliens):
+    for alien in aliens.aliens:
+        if spaceship.rect.colliderect(alien.rect):
+            return True
+
+    # By default, game not over if no collisions
+    return False 
 
 
 # Main game loop
-def run_game(window, clock, difficulty):
+def run_game(window, clock, difficulty, level):
     # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
     spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40) 
-    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS)
+
+    # With each level upgrade, alternate between extra row/col of aliens
+    extra_rows = level // 2
+    extra_cols = (level + 1) // 2 if level > 0 else 0        
+    aliens = Aliens(ALIEN_ROWS + extra_rows, ALIEN_COLS + extra_cols)
 
     successful = False
-
     running = True
     while running:
         for event in pygame.event.get():
@@ -364,9 +377,12 @@ def run_game(window, clock, difficulty):
         aliens.move(difficulty)
         aliens.shoot()
 
-        is_game_over = check_bullets(spaceship, aliens)
+        # Spaceship shot OR collides with alien == game over
+        is_spaceship_shot = check_bullets(spaceship, aliens)
+        is_spaceship_alien_collision = check_collisions(spaceship, aliens)
 
-        # Spaceship shot == game over
+        is_game_over = is_spaceship_shot or is_spaceship_alien_collision
+
         if is_game_over:
             successful = False
             running = False
@@ -385,13 +401,17 @@ def run_game(window, clock, difficulty):
 
 
 def main():
+    level = 0
     successful = True
     difficulty = launch_welcome_screen()
 
     # Initialize game settings & run
     while successful:
         window, clock = setup_game("Space Invaders! Let's play!")
-        successful = run_game(window, clock, difficulty)
+        successful = run_game(window, clock, difficulty, level)
+
+        # On successful wave, move to next level 
+        level += 1
 
 
 if __name__ == "__main__":
