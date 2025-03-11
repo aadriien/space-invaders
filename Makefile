@@ -3,7 +3,7 @@
 PYTHON = python3
 VENV_DIR = .venv
 
-all: check-venv install run
+all: install run 
 
 check-venv:
 	@if [ ! -d "$(VENV_DIR)" ]; then \
@@ -11,6 +11,7 @@ check-venv:
 	fi
 
 install: check-venv
+	@$(VENV_DIR)/bin/python -m pip install --upgrade pip -q
 	@$(VENV_DIR)/bin/python -m pip show pygame > /dev/null 2>&1 || { \
 		$(VENV_DIR)/bin/python -m pip install -q pygame; \
 	}
