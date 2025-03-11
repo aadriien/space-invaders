@@ -1,14 +1,16 @@
 # Difficulty modes:
 #   Easy -> only spaceship shoots (unlimited bullets), alien y axis consistent
 #   Medium -> only spaceship shoots (unlimited), aliens descend when hit wall
-#   Hard -> spaceship (unlimited) AND aliens shoot, aliens descend when hit wall
-#   Expert -> spaceship (limited bullets) AND aliens shoot, aliens descend when hit wall
+#   Hard -> spaceship (unlimited) AND bottom aliens shoot, aliens descend at wall
+#   Expert -> spaceship (limited bullets) AND aliens shoot, aliens descend at wall
+
+# With each successful level (all aliens destroyed), new level begins 
+# ... meaning there's 1 extra row & 1 extra column of aliens
+# ... maybe they also move faster with level up?
 
 
 import pygame
 
-
-EASY_MODE = True # Alien difficulty
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -141,7 +143,7 @@ class Aliens:
                 y_pos = (SCREEN_HEIGHT // 2 // (alien_rows + 1)) * (row + 1)
                 self.aliens.append(Alien(x_pos, y_pos))
 
-    def move(self):
+    def move(self, difficulty):
         # Move aliens as group
         hit_wall = False
         for alien in self.aliens:
@@ -149,11 +151,11 @@ class Aliens:
             if alien.rect.left <= 0 or alien.rect.right >= SCREEN_WIDTH:
                 hit_wall = True
 
-        # Reverse if any aliens hit wall (& move down if not easy mode)
+        # Reverse if any aliens hit wall (& move down if > easy mode)
         if hit_wall:
             self.speed *= -1
 
-            if not EASY_MODE:
+            if difficulty >= 1:
                 for alien in self.aliens:
                     alien.rect.y += (ALIEN_HEIGHT // 2)
 
@@ -162,14 +164,14 @@ class Aliens:
             alien.draw_to_screen(screen)
 
 
-def setup_game():
+def setup_game(caption):
     pygame.init()
     pygame.font.init()
 
     global FONT 
     FONT = pygame.font.Font(None, 32)
 
-    pygame.display.set_caption("Space Invaders!")
+    pygame.display.set_caption(caption)
     
     window = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     clock = pygame.time.Clock() # Loop speed (FPS, see below)
@@ -177,7 +179,9 @@ def setup_game():
     return window, clock
 
 
-def launch_welcome_screen(screen):
+def launch_welcome_screen():
+    window, _ = setup_game("Space Invaders! Choose your difficulty!")
+
     button_center_x = SCREEN_WIDTH // 2 - BUTTON_WIDTH // 2
     button_center_y = SCREEN_HEIGHT // 2 - BUTTON_HEIGHT // 2
 
@@ -191,12 +195,11 @@ def launch_welcome_screen(screen):
 
     running = True
     while running:
-        render_screen(screen, PASTEL_GREEN, buttons)
+        render_screen(window, PASTEL_GREEN, buttons)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
+                running = False
 
             if event.type == pygame.KEYDOWN:
                 selected_index = get_difficulty(buttons, selected_index)
@@ -208,7 +211,8 @@ def launch_welcome_screen(screen):
         if pygame.key.get_pressed()[pygame.K_RETURN]:
             running = False
 
-    return ["Easy", "Medium", "Hard", "Expert"][selected_index]
+    pygame.quit()
+    return selected_index # {0 : "Easy", 1 : "Medium", 2 : "Hard", 3 : "Expert"}
             
 
 def get_difficulty(buttons, selected_index):
@@ -269,7 +273,9 @@ def check_bullets(spaceship, aliens):
 def run_game(window, clock, difficulty):
     # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
     spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70) 
-    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS) if EASY_MODE else Aliens(ALIEN_ROWS + 1, ALIEN_COLS + 2)
+    aliens = Aliens(ALIEN_ROWS, ALIEN_COLS)
+
+    successful = False
 
     running = True
     while running:
@@ -280,22 +286,30 @@ def run_game(window, clock, difficulty):
         # Spaceship left/right arrow key movement
         handle_player_keys(spaceship)
 
-        aliens.move()
+        aliens.move(difficulty)
         check_bullets(spaceship, aliens)
+
+        # No more aliens == level beat
+        if not aliens.aliens:
+            successful = True
+            running = False
 
         # Update display
         render_screen(window, PASTEL_GREEN, [spaceship, aliens])
         clock.tick(60)
 
     pygame.quit()
+    return successful
 
 
 def main():
-    # Initialize game settings & run
-    window, clock = setup_game()
+    successful = True
+    difficulty = launch_welcome_screen()
 
-    difficulty = launch_welcome_screen(window)
-    run_game(window, clock, difficulty)
+    # Initialize game settings & run
+    while successful:
+        window, clock = setup_game("Space Invaders! Let's play!")
+        successful = run_game(window, clock, difficulty)
 
 
 if __name__ == "__main__":
