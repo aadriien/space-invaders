@@ -12,15 +12,18 @@
 # If an alien successfully shoots spaceship, then game over
 
 # TODO:
-#   - implement Hard mode (bottom row of aliens can shoot)
-#       -> implement game over when spaceship is hit by alien bullet
 #   - implement Expert mode (spaceship's bullets are limited)
 #       -> implement bullet counter metric on screen
 #       -> implement game over when alien touches / collides with spaceship
 #   - implement additional row & column of aliens on level up
 
+# DONE:
+#   - implement Hard mode (bottom row of aliens can shoot)
+#       -> implement game over when spaceship is hit by alien bullet
+
 
 import pygame
+import random
 
 
 BLACK = (0, 0, 0)
@@ -43,6 +46,10 @@ SPACESHIP_SPEED = 5
 
 ALIEN_WIDTH, ALIEN_HEIGHT = 50, 50
 ALIEN_SPEED = 3
+
+# 1 out of 500, or 0.2% chance of some alien shooting
+ALIEN_SHOOT_PROBABILITY = 1 
+ALIEN_SHOOT_PROB_DENOM = 500
 
 ALIEN_ROWS = 3
 ALIEN_COLS = 5
@@ -153,6 +160,7 @@ class Aliens:
     def __init__(self, alien_rows, alien_cols):
         # Distribute aliens evenly across top half to start
         self.aliens = []
+        self.bullets = []
         self.speed = ALIEN_SPEED
 
         alien_spacing_x = ALIEN_WIDTH + 25
@@ -185,6 +193,22 @@ class Aliens:
     def draw_to_screen(self, screen):
         for alien in self.aliens:
             alien.draw_to_screen(screen)
+
+    # If aliens' x pos same, & some alien's y is greater, then not bottom
+    def check_if_bottom(self, curr_alien):
+        for other_alien in self.aliens:
+            if other_alien.rect.x == curr_alien.rect.x:
+                if other_alien.rect.y > curr_alien.rect.y:
+                    return False
+        return True
+
+    def shoot(self):
+        for alien in self.aliens:
+            # If alien on the bottom, 0.2% chance of shooting on render
+            if self.check_if_bottom(alien):
+                if random.randint(1, ALIEN_SHOOT_PROB_DENOM) <= ALIEN_SHOOT_PROBABILITY:
+                    bullet = Bullet(alien.rect.centerx, alien.rect.bottom)
+                    self.bullets.append(bullet)
 
 
 def setup_game(caption):
@@ -253,11 +277,11 @@ def get_difficulty(buttons, selected_index):
 def render_screen(screen, color, items_to_draw):
     screen.fill(color)
 
-    # Draw spaceships (+ bullets), aliens, buttons, etc
+    # Draw spaceships (+ bullets), aliens (+ bullets), buttons, etc
     for item in items_to_draw:
         item.draw_to_screen(screen)
 
-        if isinstance(item, Spaceship):
+        if isinstance(item, Spaceship) or isinstance(item, Aliens):
             for bullet in item.bullets:
                 bullet.draw_to_screen(screen)
 
@@ -291,6 +315,19 @@ def check_bullets(spaceship, aliens):
                 spaceship.bullets.remove(bullet)
                 break
 
+    # Similar check, but for alien bullets
+    for bullet in aliens.bullets.copy():
+        bullet.move(-1)
+
+        if bullet.off_screen():
+            aliens.bullets.remove(bullet)
+
+        # If spaceship hit, then game over
+        if bullet.rect.colliderect(spaceship.rect):
+            return True 
+
+    return False # By default, game not over
+
 
 # Main game loop
 def run_game(window, clock, difficulty):
@@ -310,7 +347,14 @@ def run_game(window, clock, difficulty):
         handle_player_keys(spaceship)
 
         aliens.move(difficulty)
-        check_bullets(spaceship, aliens)
+        aliens.shoot()
+
+        is_game_over = check_bullets(spaceship, aliens)
+
+        # Spaceship shot == game over
+        if is_game_over:
+            successful = False
+            running = False
 
         # No more aliens == level beat
         if not aliens.aliens:
