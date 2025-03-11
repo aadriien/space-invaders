@@ -8,13 +8,17 @@
 # ... meaning there's 1 extra row & 1 extra column of aliens
 # ... maybe they also move faster with level up?
 
+# If an alien reaches spaceship (collide/contact), then game over
+# If an alien successfully shoots spaceship, then game over
+
 
 import pygame
 
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-PASTEL_GREEN = (170, 208, 188) 
+LIGHT_GREEN = (170, 208, 188) 
+DEEP_GREEN = (71, 175, 121)
 LIGHT_BLUE = (141, 214, 236)
 DEEP_BLUE = (46, 147, 177)
 
@@ -26,10 +30,10 @@ BULLET_WIDTH, BULLET_HEIGHT = 8, 8
 BULLET_SPEED = 4
 SHOOT_COOLDOWN = 500 # 500 millisec == 0.5 sec
 
-SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 20, 40
+SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 60, 100
 SPACESHIP_SPEED = 5
 
-ALIEN_WIDTH, ALIEN_HEIGHT = 30, 30
+ALIEN_WIDTH, ALIEN_HEIGHT = 50, 50
 ALIEN_SPEED = 3
 
 ALIEN_ROWS = 3
@@ -99,6 +103,9 @@ class Spaceship(GameObject):
             SPACESHIP_WIDTH, SPACESHIP_HEIGHT, 
             BLACK
         )
+        self.image = pygame.image.load("images/spaceship.png") 
+        self.image = pygame.transform.scale(self.image, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
+
         self.speed = SPACESHIP_SPEED
         self.bullets = []
         self.last_shot = 0 # Time of last shot for cooldown (can't spam)
@@ -128,6 +135,9 @@ class Alien(GameObject):
             ALIEN_WIDTH, ALIEN_HEIGHT, 
             BLACK
         )
+        self.image = pygame.image.load("images/alien.png") 
+        self.image = pygame.transform.scale(self.image, (ALIEN_WIDTH, ALIEN_HEIGHT))
+
         self.speed = ALIEN_SPEED
 
 
@@ -137,10 +147,15 @@ class Aliens:
         self.aliens = []
         self.speed = ALIEN_SPEED
 
+        alien_spacing_x = ALIEN_WIDTH + 25
+        alien_spacing_y = ALIEN_HEIGHT + 10
+
+        space_distribution_x = (SCREEN_WIDTH - (alien_cols * alien_spacing_x)) // 2
+
         for row in range(alien_rows):
             for col in range(alien_cols):
-                x_pos = (SCREEN_WIDTH // (alien_cols + 1)) * (col + 1)
-                y_pos = (SCREEN_HEIGHT // 2 // (alien_rows + 1)) * (row + 1)
+                x_pos = space_distribution_x + (alien_spacing_x * col)
+                y_pos = 30 + (alien_spacing_y * row)
                 self.aliens.append(Alien(x_pos, y_pos))
 
     def move(self, difficulty):
@@ -195,7 +210,7 @@ def launch_welcome_screen():
 
     running = True
     while running:
-        render_screen(window, PASTEL_GREEN, buttons)
+        render_screen(window, LIGHT_GREEN, buttons)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -272,7 +287,7 @@ def check_bullets(spaceship, aliens):
 # Main game loop
 def run_game(window, clock, difficulty):
     # Top left of screen (0, 0) ... bottom right (WIDTH, HEIGHT)
-    spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70) 
+    spaceship = Spaceship(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40) 
     aliens = Aliens(ALIEN_ROWS, ALIEN_COLS)
 
     successful = False
@@ -295,7 +310,7 @@ def run_game(window, clock, difficulty):
             running = False
 
         # Update display
-        render_screen(window, PASTEL_GREEN, [spaceship, aliens])
+        render_screen(window, DEEP_GREEN, [spaceship, aliens])
         clock.tick(60)
 
     pygame.quit()
