@@ -37,9 +37,14 @@ SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 BUTTON_WIDTH, BUTTON_HEIGHT = 250, 125
 BUTTON_SPACING = 20
 
+ALIEN_ROWS = 3
+ALIEN_COLS = 5
+
 BULLET_WIDTH, BULLET_HEIGHT = 8, 8
 BULLET_SPEED = 4
+
 SHOOT_COOLDOWN = 500 # 500 millisec == 0.5 sec
+BULLET_LIMIT = 3 * ALIEN_ROWS * ALIEN_COLS 
 
 SPACESHIP_WIDTH, SPACESHIP_HEIGHT = 60, 100
 SPACESHIP_SPEED = 5
@@ -50,9 +55,6 @@ ALIEN_SPEED = 3
 # 1 out of 500, or 0.2% chance of some alien shooting
 ALIEN_SHOOT_PROBABILITY = 1 
 ALIEN_SHOOT_PROB_DENOM = 500
-
-ALIEN_ROWS = 3
-ALIEN_COLS = 5
 
 
 # Difficulty selection on welcome page
@@ -76,7 +78,7 @@ class Button:
         )
 
         pygame.draw.rect(screen, button_color, self.rect, border_radius = 5)
-        text_surface = FONT.render(self.text, True, WHITE)
+        text_surface = FONT_LARGE.render(self.text, True, BLACK)
         screen.blit(text_surface, text_surface.get_rect(center = self.rect.center))
 
 
@@ -122,8 +124,10 @@ class Spaceship(GameObject):
         self.image = pygame.transform.scale(self.image, (SPACESHIP_WIDTH, SPACESHIP_HEIGHT))
 
         self.speed = SPACESHIP_SPEED
+        
         self.bullets = []
         self.last_shot = 0 # Time of last shot for cooldown (can't spam)
+        self.bullet_count = 0
 
     def move(self, direction):
         self.rect.x += direction * self.speed
@@ -134,12 +138,17 @@ class Spaceship(GameObject):
         elif self.rect.right > SCREEN_WIDTH:
             self.rect.right = SCREEN_WIDTH
 
-    def shoot(self):
+    def shoot(self, difficulty):
         curr_time = pygame.time.get_ticks()
         if (curr_time - self.last_shot) >= SHOOT_COOLDOWN:
-            bullet = Bullet(self.rect.centerx, self.rect.top)
-            self.bullets.append(bullet)
-            self.last_shot = curr_time
+
+            # On Expert mode, limit spaceship's total bullets
+            if difficulty < 3 or self.bullet_count < BULLET_LIMIT:
+                bullet = Bullet(self.rect.centerx, self.rect.top)
+                self.bullets.append(bullet)
+
+                self.last_shot = curr_time
+                self.bullet_count += 1
 
 
 class Alien(GameObject):
@@ -159,9 +168,10 @@ class Alien(GameObject):
 class Aliens:
     def __init__(self, alien_rows, alien_cols):
         # Distribute aliens evenly across top half to start
+        self.speed = ALIEN_SPEED
+        
         self.aliens = []
         self.bullets = []
-        self.speed = ALIEN_SPEED
 
         alien_spacing_x = ALIEN_WIDTH + 25
         alien_spacing_y = ALIEN_HEIGHT + 10
@@ -171,7 +181,7 @@ class Aliens:
         for row in range(alien_rows):
             for col in range(alien_cols):
                 x_pos = space_distribution_x + (alien_spacing_x * col)
-                y_pos = 30 + (alien_spacing_y * row)
+                y_pos = 50 + (alien_spacing_y * row)
                 self.aliens.append(Alien(x_pos, y_pos))
 
     def move(self, difficulty):
@@ -215,8 +225,9 @@ def setup_game(caption):
     pygame.init()
     pygame.font.init()
 
-    global FONT 
-    FONT = pygame.font.Font(None, 32)
+    global FONT_SMALL, FONT_LARGE
+    FONT_SMALL = pygame.font.Font(None, 28)
+    FONT_LARGE = pygame.font.Font(None, 40)
 
     pygame.display.set_caption(caption)
     
@@ -284,11 +295,15 @@ def render_screen(screen, color, items_to_draw):
         if isinstance(item, Spaceship) or isinstance(item, Aliens):
             for bullet in item.bullets:
                 bullet.draw_to_screen(screen)
+            
+            if isinstance(item, Spaceship):
+                text_surface = FONT_SMALL.render(f"Bullets Fired: {item.bullet_count}", True, BLACK)
+                screen.blit(text_surface, (10, 10))
 
     pygame.display.flip()
 
 
-def handle_player_keys(spaceship):
+def handle_player_keys(spaceship, difficulty):
     keys = pygame.key.get_pressed() 
 
     if keys[pygame.K_LEFT]:
@@ -297,7 +312,7 @@ def handle_player_keys(spaceship):
         spaceship.move(1)
 
     if keys[pygame.K_SPACE]:
-        spaceship.shoot()
+        spaceship.shoot(difficulty)
 
 
 def check_bullets(spaceship, aliens):
@@ -344,7 +359,7 @@ def run_game(window, clock, difficulty):
                 running = False
 
         # Spaceship left/right arrow key movement
-        handle_player_keys(spaceship)
+        handle_player_keys(spaceship, difficulty)
 
         aliens.move(difficulty)
         aliens.shoot()
