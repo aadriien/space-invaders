@@ -286,7 +286,7 @@ def get_difficulty(buttons, selected_index):
     return selected_index
 
 
-def render_screen(screen, color, items_to_draw):
+def render_screen(screen, color, items_to_draw, difficulty = None):
     screen.fill(color)
 
     # Draw spaceships (+ bullets), aliens (+ bullets), buttons, etc
@@ -298,7 +298,15 @@ def render_screen(screen, color, items_to_draw):
                 bullet.draw_to_screen(screen)
             
             if isinstance(item, Spaceship):
-                text_surface = FONT_SMALL.render(f"Bullets Fired: {item.bullet_count}", True, BLACK)
+                # Formulate bullet counter text metric
+                bullet_metric_text = f"Bullets Fired:  {item.bullet_count}"
+
+                if difficulty and difficulty >= 3:
+                    bullet_metric_text += f"  /  {BULLET_LIMIT}"
+                else:
+                    bullet_metric_text += f"  /  Unlimited"
+
+                text_surface = FONT_SMALL.render(bullet_metric_text, True, BLACK)
                 screen.blit(text_surface, (10, 10))
 
     pygame.display.flip()
@@ -393,7 +401,7 @@ def run_game(window, clock, difficulty, level):
             running = False
 
         # Update display
-        render_screen(window, DEEP_GREEN, [spaceship, aliens])
+        render_screen(window, DEEP_GREEN, [spaceship, aliens], difficulty)
         clock.tick(60)
 
     pygame.quit()
