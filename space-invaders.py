@@ -96,8 +96,8 @@ class Bullet(GameObject):
         )
         self.speed = BULLET_SPEED
 
-    def move(self):
-        self.rect.y -= self.speed
+    def move(self, direction):
+        self.rect.y -= direction * self.speed
 
     def off_screen(self):
         return self.rect.y < 0
@@ -278,7 +278,7 @@ def handle_player_keys(spaceship):
 
 def check_bullets(spaceship, aliens):
     for bullet in spaceship.bullets.copy(): # Iterate on copy to avoid issues
-        bullet.move()
+        bullet.move(1)
 
         # Check if bullet left screen
         if bullet.off_screen():
