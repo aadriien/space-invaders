@@ -393,7 +393,8 @@ def run_game(window, clock, difficulty, level):
         handle_player_keys(spaceship, difficulty)
 
         aliens.move(difficulty)
-        aliens.shoot()
+        if difficulty >= 2:
+            aliens.shoot()
 
         # Spaceship shot OR collides with alien == game over
         is_spaceship_shot = check_bullets(spaceship, aliens)
