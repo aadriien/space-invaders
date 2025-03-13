@@ -238,54 +238,6 @@ def setup_game(caption):
     return window, clock
 
 
-def launch_welcome_screen():
-    window, _ = setup_game("Space Invaders! Choose your difficulty!")
-
-    button_center_x = SCREEN_WIDTH // 2 - BUTTON_WIDTH // 2
-    button_center_y = SCREEN_HEIGHT // 2 - BUTTON_HEIGHT // 2
-
-    buttons = [
-        Button("Easy", button_center_x, button_center_y - 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Medium", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Hard", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Expert", button_center_x, button_center_y + 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-    ]
-    selected_index = 0 # Default == easy
-
-    running = True
-    while running:
-        render_screen(window, LIGHT_GREEN, buttons)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            # Choose mode & begin game on enter
-            if event.type == pygame.KEYDOWN:
-                selected_index = get_difficulty(buttons, selected_index)
-                    
-        for i, button in enumerate(buttons):
-            button.selected = (i == selected_index)
-
-        if pygame.key.get_pressed()[pygame.K_RETURN]:
-            running = False
-
-    pygame.quit()
-    return selected_index # {0 : "Easy", 1 : "Medium", 2 : "Hard", 3 : "Expert"}
-            
-
-def get_difficulty(buttons, selected_index):
-    keys = pygame.key.get_pressed()
-
-    # Up arrow == easier, down == harder
-    if keys[pygame.K_DOWN]:
-        selected_index = (selected_index + 1) % len(buttons)
-    elif keys[pygame.K_UP]:
-        selected_index = (selected_index - 1) % len(buttons)
-    
-    return selected_index
-
-
 def render_screen(screen, color, items_to_draw, difficulty = None):
     screen.fill(color)
 
@@ -310,6 +262,64 @@ def render_screen(screen, color, items_to_draw, difficulty = None):
                 screen.blit(text_surface, (10, 10))
 
     pygame.display.flip()
+
+
+def get_button_choice(buttons, selected_index):
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_DOWN]:
+        selected_index = (selected_index + 1) % len(buttons)
+    elif keys[pygame.K_UP]:
+        selected_index = (selected_index - 1) % len(buttons)
+    
+    return selected_index
+
+
+def launch_screen(which_screen):
+    button_center_x = SCREEN_WIDTH // 2 - BUTTON_WIDTH // 2
+    button_center_y = SCREEN_HEIGHT // 2 - BUTTON_HEIGHT // 2
+    
+    if which_screen == "welcome":
+        window, _ = setup_game("Space Invaders! Choose your difficulty!")
+
+        buttons = [
+        Button("Easy", button_center_x, button_center_y - 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Medium", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Hard", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        Button("Expert", button_center_x, button_center_y + 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+    ]
+
+    elif which_screen == "end":
+        window, _ = setup_game("Space Invaders! Play again?")
+
+        buttons = [
+            Button("Play Again", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+            Button("Quit Game", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        ]
+
+    # Default == Easy (if welcome) or Play Again (if end)
+    selected_index = 0 
+
+    running = True
+    while running:
+        render_screen(window, LIGHT_GREEN, buttons)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            # Choose mode & begin game on enter
+            if event.type == pygame.KEYDOWN:
+                selected_index = get_button_choice(buttons, selected_index)
+                    
+        for i, button in enumerate(buttons):
+            button.selected = (i == selected_index)
+
+        if pygame.key.get_pressed()[pygame.K_RETURN]:
+            running = False
+
+    pygame.quit()
+    return selected_index
 
 
 def handle_player_keys(spaceship, difficulty):
@@ -411,7 +421,7 @@ def run_game(window, clock, difficulty, level):
 def main():
     level = 0
     successful = True
-    difficulty = launch_welcome_screen()
+    difficulty = launch_screen("welcome")
 
     # Initialize game settings & run
     while successful:
@@ -420,6 +430,10 @@ def main():
 
         # On successful wave, move to next level 
         level += 1
+
+    play_again = launch_screen("end")
+    if play_again == 0: 
+        main()
 
 
 if __name__ == "__main__":
