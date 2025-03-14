@@ -25,6 +25,7 @@
 
 import pygame
 import random
+import time
 
 
 BLACK = (0, 0, 0)
@@ -226,9 +227,10 @@ def setup_game(caption):
     pygame.init()
     pygame.font.init()
 
-    global FONT_SMALL, FONT_LARGE
+    global FONT_SMALL, FONT_LARGE, FONT_MEGA
     FONT_SMALL = pygame.font.Font(None, 28)
     FONT_LARGE = pygame.font.Font(None, 40)
+    FONT_MEGA = pygame.font.Font(None, 100)
 
     pygame.display.set_caption(caption)
     
@@ -283,11 +285,11 @@ def launch_screen(which_screen):
         window, _ = setup_game("Space Invaders! Choose your difficulty!")
 
         buttons = [
-        Button("Easy", button_center_x, button_center_y - 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Medium", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Hard", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-        Button("Expert", button_center_x, button_center_y + 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
-    ]
+            Button("Easy", button_center_x, button_center_y - 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+            Button("Medium", button_center_x, button_center_y - 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+            Button("Hard", button_center_x, button_center_y + 0.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+            Button("Expert", button_center_x, button_center_y + 1.5 * (BUTTON_SPACING + BUTTON_HEIGHT)),
+        ]
 
     elif which_screen == "end":
         window, _ = setup_game("Space Invaders! Play again?")
@@ -320,6 +322,36 @@ def launch_screen(which_screen):
 
     pygame.quit()
     return selected_index
+
+
+def launch_level_countdown(level):
+    if level > 0:
+        window, _ = setup_game("Space Invaders! Next level incoming —>")
+    else:
+        window, _ = setup_game("Space Invaders! Get ready to play —>")
+
+    running = True
+    while running:
+        window.fill(LIGHT_GREEN) 
+        level_text = FONT_MEGA.render(f"Level {level}", True, BLACK)
+        level_rect = level_text.get_rect(center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        window.blit(level_text, level_rect)
+
+        pygame.display.flip()
+        time.sleep(2)
+
+        for i in range(3, 0, -1):
+            window.fill(LIGHT_GREEN)  
+            countdown_text = FONT_MEGA.render(str(i), True, BLACK) 
+            countdown_rect = countdown_text.get_rect(center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+            window.blit(countdown_text, countdown_rect) 
+
+            pygame.display.flip() 
+            time.sleep(1)
+
+        running = False
+
+    pygame.quit()
 
 
 def handle_player_keys(spaceship, difficulty):
@@ -426,6 +458,8 @@ def main():
 
     # Initialize game settings & run
     while successful:
+        launch_level_countdown(level)
+
         window, clock = setup_game("Space Invaders! Let's play!")
         successful = run_game(window, clock, difficulty, level)
 
